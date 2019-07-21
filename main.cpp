@@ -255,11 +255,13 @@ struct Triangle
         double detNum = dotProduct(e1,e2_cross_e3);
         double t = detNum/det;
         outFile << "t: " << t << endl;
+
         if(isOnTriangle(Point(ray.p.x+t*ray.v.x,ray.p.y+t*ray.v.y,ray.p.z+t*ray.v.z)))
         {
             setNormal();
             return t;
         }
+
 
         else return -INF;
     }
@@ -613,26 +615,6 @@ struct CheckerBoard
     void drawCheckerBoard()
     {
         double c = 1.0;
-//        for(int i=0; i<6000; i+=width)
-//        {
-//            for(int j=0; j<6000; j+=width)
-//            {
-//                glColor3f(c,c,c);
-//
-//                color_arr[int((i)/width)][int((j)/width)] = c;
-//                point_arr[int((i)/width)][int((j)/width)] = Point(i-3000,j-3000,0);
-//                glBegin(GL_QUADS);
-//                {
-//                    glVertex3f(i-3000,j-3000,0);
-//                    glVertex3f(i-3000+width,j-3000,0);
-//                    glVertex3f(i-3000+width,j-3000+width,0);
-//                    glVertex3f(i-3000,j-3000+width,0);
-//                }
-//                glEnd();
-//                c = 1.0-c;
-//            }
-//            c = 1.0-c;
-//        }
 
 
         for(int i=-3000; i<3000; i+=width)
@@ -745,7 +727,6 @@ void drawGrid()
 }
 
 
-Color lightSouce;//(1,1,1);
 Color computeColor(Ray source,string type,int id,int depth)
 {
     if(depth==0) return Color(0,0,0);
@@ -983,48 +964,54 @@ Color computeColor(Ray source,string type,int id,int depth)
 
 
 }
-//void generateImage()
-//{
-//    Ray src;
-//    src.p.x = position.x;
-//    src.p.y = position.y;
-//    src.p.z = position.z;
-//    //  sourcePower = Color(1,1,1);
-//
-//    int   screenHeight = number_of_pixels;
-//    int   screenWidth = number_of_pixels;
-//    bitmap_image image(number_of_pixels,number_of_pixels);
-//    for(int row = 0; row<screenHeight; row++)
-//    {
-//        for(int colm = 0; colm<screenWidth; colm++)
-//        {
-//            double ht = row-screenHeight/2;
-//            ht/=screenHeight/2;
-//            double wd = colm-screenWidth/2;
-//            wd/=screenWidth/2;
-//            Point dir = addPoints(scalePoint(upVector,ht), scalePoint(rightVector,wd));
-//            dir = addPoints(lookVector,dir);
-//            src.v.x = dir.x;
-//            src.v.y = dir.y;
-//            src.v.z = dir.z;
-//            src.v.normalize();
-//            Color c = computeColor(src,"eye", 0,1);
-//            image.set_pixel(colm,number_of_pixels-1-row,c.R*255,c.G*255,c.B*255);
-//
-//            //  imageMap[row][colm] = rayCast(src,recursionLevel, ObjectID(EYE,0));
-//
-//        }
-//    }
-//    cout << "Done forming the image"<<endl;
-//    image.save_image("out.bmp");
-//}
+
 double degreeToRadian(double angle)
 {
     return (pi*angle/180.0);
 }
+//void generateImage2()
+//{
+//    number_of_pixels = 200;
+//    int image_width = number_of_pixels;
+//    bitmap_image image(image_width, image_width);
+//    for(int i=0;i<image_width;i++) {
+//        for(int j=0;j<image_width; j++) {
+//            image.set_pixel(j, i,0,0,0);
+//        }
+//    }
+//    int Window_height = 500;
+//    int Window_width = 500;
+//    double VIEW_ANGLE = 90;
+//    double plane_distance= (Window_height/2)/tan(VIEW_ANGLE*pi/360);
+//    Point topleft;
+//    topleft.x= position.x + lookVector.x*plane_distance-rightVector.x*Window_width/2+upVector.x*Window_height/2;
+//    topleft.y= position.y + lookVector.y*plane_distance-rightVector.y*Window_width/2+upVector.y*Window_height/2;
+//    topleft.z= position.z + lookVector.z*plane_distance-rightVector.z*Window_width/2+upVector.z*Window_height/2;
+//    double du=double(Window_width)/image_width;
+//    double dv=double(Window_height)/image_width;
+//    for(int i=0; i<image_width; i++){
+//        for(int j=0; j<image_width; j++){
+//            Point corner;
+//            corner.x=topleft.x+j*rightVector.x*du-i*upVector.x*dv;
+//            corner.y=topleft.y+j*rightVector.y*du-i*upVector.y*dv;
+//            corner.z=topleft.z+j*rightVector.z*du-i*upVector.z*dv;
+//             Ray source = Ray(position,corner);
+//
+//             Color c = computeColor(source,"eye", 0,1);
+//
+//
+//
+//            image.set_pixel(j,i,c.R*255,c.G*255,c.B*255);
+//        }
+//    }
+//    cout << "Done forming the image"<<endl;
+//    image.save_image("out.bmp");
+//
+//
+//}
 void generateImage()
 {
-    number_of_pixels = 400;
+    //number_of_pixels = 400;
 
     int aspectRatio = 1;
     double fovY = 90.0;
@@ -1058,7 +1045,7 @@ void generateImage()
             newPoint = addPoints(newPoint,scalePoint(rightVector,cellWidth*j));
             Ray source = Ray(position,newPoint);
 
-             Color c = computeColor(source,"eye", 0,1);
+             Color c = computeColor(source,"camera", 0,recursion);
 
 
              int col = j+number_of_pixels/2;
@@ -1068,6 +1055,25 @@ void generateImage()
         }
 
     }
+//    for(int i=0;i<number_of_pixels;i++)
+//    {
+//        for(int j=0;j<number_of_pixels;j++)
+//        {
+//            Point newPoint = addPoints(initialPoint,scalePoint(upVector,cellHeight*i));
+//            newPoint = addPoints(newPoint,scalePoint(rightVector,-cellWidth*j));
+//            Ray source = Ray(position,newPoint);
+//
+//             Color c = computeColor(source,"eye", 0,1);
+//
+//
+//           //  int col = j+number_of_pixels/2;
+//           //  int row = i+number_of_pixels/2;
+//            image.set_pixel(j,i,c.R*255,c.G*255,c.B*255);
+//
+//        }
+//
+//    }
+
 
     cout << "Done forming the image"<<endl;
     image.save_image("out.bmp");
@@ -1299,8 +1305,8 @@ void display()
     //gluLookAt(100,100,100,	0,0,0,	0,0,1);
     //gluLookAt(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight,		0,0,0,		0,0,1);
     //gluLookAt(0,0,200,	0,0,0,	0,1,0);
-    gluLookAt(position.x, position.y, position.z, position.x + 10*lookVector.x, position.y + 10*lookVector.y,
-              position.z + 10*lookVector.z,upVector.x, upVector.y, upVector.z);
+    gluLookAt(position.x, position.y, position.z, position.x + lookVector.x, position.y + lookVector.y,
+              position.z + lookVector.z,upVector.x, upVector.y, upVector.z);
 
 
     //again select MODEL-VIEW
@@ -1442,8 +1448,13 @@ void init()
     drawaxes=1;
     cameraHeight=150.0;
     cameraAngle=1.0;
+//    position = Point(0,-150,70);
+//    upVector = Point(0,0,1);
+//    rightVector = Point(1,0,0);
+//
+//    lookVector = Point(0,1,0);
     upVector = Point(0,0,1);
-    lightSouce = Color(1,1,1);
+
     rightVector = Point(-1.0/sqrt(2), 1.0/sqrt(2), 0);
     lookVector = Point(-1.0/sqrt(2), -1.0/sqrt(2), 0);
 
