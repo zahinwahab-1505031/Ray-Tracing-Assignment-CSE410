@@ -68,12 +68,16 @@ struct Color
         G=y;
         B=z;
     }
+    Color scaleColor(double P){
+        return Color(R*P,G*P,B*P);
+    }
     void printColor()
     {
         cout << "R: " << R << " G: " << G << " B: " << B<<endl;
     }
 
 };
+
 Point subtractPoints(Point a,Point b)
 {
     Point result;
@@ -88,6 +92,11 @@ double dotProduct(Point p,Point q)
     double cp = p.x*q.x + p.y*q.y+p.z*q.z;
     return cp;
 }
+double dotProduct(Color p,Color q)
+{
+    double cp = p.R*q.R + p.G*q.G+p.G*q.G;
+    return cp;
+}
 Point crossProduct(Point p,Point q)
 {
     Point cp;
@@ -96,6 +105,16 @@ Point crossProduct(Point p,Point q)
     cp.z = p.x*q.y - p.y*q.x;
     return cp;
 }
+
+Color crossProduct(Color p,Color q)
+{
+    Color cp;
+    cp.R = p.G*q.B - p.B*q.G;
+    cp.G = p.B*q.R - p.R*q.B;
+    cp.B = p.R*q.G - p.G*q.R;
+    return cp;
+}
+
 Point scalePoint(Point p,double q)
 {
     /*************
@@ -118,6 +137,17 @@ Point addPoints(Point p,Point q)
 
     return cp;
 }
+Color addColors(Color p,Color q)
+{
+    /*************
+    ******************/
+    Color cp;
+    cp.R = p.R+q.R;
+    cp.G = p.G+q.G;
+    cp.B = p.B+q.B;
+
+    return cp;
+}
 struct Ray
 {
     Point p;
@@ -133,6 +163,7 @@ struct Ray
         v.normalize();
 
     }
+
     void printRay()
     {
         cout << "Direction: ";
@@ -400,7 +431,18 @@ struct Sphere
                 setNormal(ray,t1);
                 return t1;
             }
-            else return min(t1,t2);
+            else {
+                    if(t1<t2) {
+                            setNormal(ray,t1);
+                            return t1;
+
+                    }
+                    else {
+                        setNormal(ray,t2);
+                        return t2;
+
+                    }
+            }
         }
 
 
@@ -555,7 +597,7 @@ struct CheckerBoard
             {
                 Point q = point_arr[i][j];
                 //q.printPoint();
-                if(p.x>=q.x&&p.x<(q.x+width)&&p.y>=q.y&&p.y<(q.y+width))
+                if(p.x>q.x&&p.x<=(q.x+width)&&p.y>q.y&&p.y<=(q.y+width)&& p.z>-eps && p.z<eps)
                 {
                     flag = true;
 
@@ -571,11 +613,33 @@ struct CheckerBoard
     void drawCheckerBoard()
     {
         double c = 1.0;
+//        for(int i=0; i<6000; i+=width)
+//        {
+//            for(int j=0; j<6000; j+=width)
+//            {
+//                glColor3f(c,c,c);
+//
+//                color_arr[int((i)/width)][int((j)/width)] = c;
+//                point_arr[int((i)/width)][int((j)/width)] = Point(i-3000,j-3000,0);
+//                glBegin(GL_QUADS);
+//                {
+//                    glVertex3f(i-3000,j-3000,0);
+//                    glVertex3f(i-3000+width,j-3000,0);
+//                    glVertex3f(i-3000+width,j-3000+width,0);
+//                    glVertex3f(i-3000,j-3000+width,0);
+//                }
+//                glEnd();
+//                c = 1.0-c;
+//            }
+//            c = 1.0-c;
+//        }
+
 
         for(int i=-3000; i<3000; i+=width)
         {
             for(int j=-3000; j<3000; j+=width)
             {
+                // cout << c;
                 glColor3f(c,c,c);
 
                 color_arr[int((i+3000)/width)][int((j+3000)/width)] = c;
@@ -604,8 +668,8 @@ struct CheckerBoard
         if(abs(ray.v.z)<eps)  return -INF;
         double t = -ray.p.z/ray.v.z;
         Point p = Point(ray.p.x+t*ray.v.x,ray.p.y+t*ray.v.y,ray.p.z+t*ray.v.z);
-        if(abs(p.z)>eps)    return -INF;
-        if(p.x<-3000||p.x>3000 || p.y <-3000 || p.y > 3000) return -INF;
+
+        if(p.x<-3000||p.x>3000 || p.y <-3000 || p.y > 3000 && !(p.z>-eps || p.z<eps)) return -INF;
         return t;
 
 
@@ -679,25 +743,12 @@ void drawGrid()
         glEnd();
     }
 }
-Color pixelMap[1000][1000];
 
-void getImage()
-{
-    bitmap_image image(number_of_pixels,number_of_pixels);
-    for(int i=0; i<number_of_pixels; i++)
-    {
-        for(int j=0; j<number_of_pixels; j++)
-        {
-            //  Color &c = pixelMap[i][j];
-            //  image.set_pixel(j,number_of_pixels-i-1,c.R*255,c.G*255,c.B*255);  // Setting the color of the pixels
-        }
-    }
-    image.save_image("out.bmp");
-}
 
 Color lightSouce;//(1,1,1);
-Color computeColor(Ray source,string type,int id)
+Color computeColor(Ray source,string type,int id,int depth)
 {
+    if(depth==0) return Color(0,0,0);
     // cout << "Source: ";
     //source.printRay();
     double t_sphere = INF,t_pyramid = INF,t_checkerBoard;
@@ -706,9 +757,11 @@ Color computeColor(Ray source,string type,int id)
 
     for(int i=0; i<sphere_arr.size(); i++)
     {
+        if(!(type=="sphere" && id==i)){
+
         double temp = sphere_arr[i].raySphereIntersection(source);
         // cout << "Intersection for sphere: " << temp << endl;
-        if(temp!=-INF && temp<t_sphere)
+        if(temp!=-INF && temp>=0 && temp<t_sphere)
         {
             t_sphere =temp;
             sphereNormal.x = sphere_arr[i].normal.x;
@@ -717,13 +770,16 @@ Color computeColor(Ray source,string type,int id)
             sphereIndex = i;
 
         }
+        }
+
 
     }
-   // if(t_sphere>=-eps && t_sphere<=eps)sphereIndex= -1;
-    //  if(t_sphere>INF-eps)    sphereIndex= -1;
-     for(int i=0; i<pyramid_arr.size(); i++)
+   //  if(t_sphere>=-eps && t_sphere<=eps)sphereIndex= -1;
+      if(t_sphere>INF-eps)    sphereIndex= -1;
+    for(int i=0; i<pyramid_arr.size(); i++)
     {
         //   cout << i;
+        if(!(type=="pyramid" && id==i)) {
         double temp = pyramid_arr[i].rayPyramidIntersection(source);
         // cout << "Intersection for pyramid: " << temp << endl;
         if(temp!=-INF && temp>=0 && temp<t_pyramid)
@@ -736,144 +792,294 @@ Color computeColor(Ray source,string type,int id)
             //    pyramid_arr[i].color.printColor();
 
         }
+        }
 
     }
-    // if(t_pyramid>INF-eps)    pyramidIndex= -1;
-  //  if(t_pyramid>=-eps && t_pyramid<=eps)pyramidIndex= -1;
-  //  if(t_pyramid<t_sphere ) cout << "pyramid kacche \n";
-    t_checkerBoard = checkerBoard.rayCheckerBoardIntersection(source);
+     if(t_pyramid>INF-eps)    pyramidIndex= -1;
+     // if(t_pyramid>=-eps && t_pyramid<=eps)pyramidIndex= -1;
+    //  if(t_pyramid<t_sphere ) cout << "pyramid kacche \n";
+    if(type!="checkerBoard")
+        t_checkerBoard = checkerBoard.rayCheckerBoardIntersection(source);
 
     Point finalNormal;
     double final_t;
+    string final_object;
     //  cout << "Sphere index: " << sphereIndex << "Pyramid index: " << pyramidIndex << endl;
 
-    if(sphereIndex == -1 && pyramidIndex == -1 && (t_checkerBoard == -INF|| t_checkerBoard > INF-eps))
+    if(sphereIndex == -1 && pyramidIndex == -1 && (t_checkerBoard<=0 || t_checkerBoard == -INF|| t_checkerBoard > INF-eps))
     {
         return Color(0,0,0);
     }
-    else if(sphereIndex == -1 && pyramidIndex == -1 && t_checkerBoard>=0)
-    {
-        Point p = Point(source.p.x+t_checkerBoard*source.v.x,source.p.y+t_checkerBoard*source.v.y,source.p.z+t_checkerBoard*source.v.z);
-        double c = checkerBoard.whichTile(p);
 
-        return Color(c,c,c);
+    else if(sphereIndex == -1 && pyramidIndex == -1 && !(t_checkerBoard<=0 || t_checkerBoard == -INF|| t_checkerBoard > INF-eps))
+    {
+        final_t = t_checkerBoard;
+        final_object = "checkerBoard";
+        finalNormal = Point(0,0,1);
+
+//        Point p = Point(source.p.x+t_checkerBoard*source.v.x,source.p.y+t_checkerBoard*source.v.y,source.p.z+t_checkerBoard*source.v.z);
+//        double c = checkerBoard.whichTile(p);
+
+        //return Color(c,c,c);
     }
 
     else if(pyramidIndex == -1 || t_sphere < t_pyramid)
     {
         if(t_checkerBoard>=0  && t_checkerBoard<t_sphere)
         {
-            Point p = Point(source.p.x+t_checkerBoard*source.v.x,source.p.y+t_checkerBoard*source.v.y,source.p.z+t_checkerBoard*source.v.z);
-            double c = checkerBoard.whichTile(p);
-            //  if(c==1) cout << "white is returned ";
-            return Color(c,c,c);
+            final_t = t_checkerBoard;
+            final_object = "checkerBoard";
+            finalNormal = Point(0,0,1);
+
 
         }
         else
         {
-            return sphere_arr[sphereIndex].color;
+            final_t = t_sphere;
+            final_object = "sphere";
+            finalNormal = Point(sphereNormal.x,sphereNormal.y,sphereNormal.z);
+            // return sphere_arr[sphereIndex].color;
         }
 
     }
-    else if(sphereIndex == -1 || t_pyramid < t_sphere)
+    else if(sphereIndex == -1 || t_pyramid <= t_sphere)
     {
         if(t_checkerBoard>=0  &&t_checkerBoard<t_pyramid)
         {
-            cout << "Mofo\n";
-            Point p = Point(source.p.x+t_checkerBoard*source.v.x,source.p.y+t_checkerBoard*source.v.y,source.p.z+t_checkerBoard*source.v.z);
-            double c = checkerBoard.whichTile(p);
+            final_t = t_checkerBoard;
+            final_object = "checkerBoard";
+            finalNormal = Point(0,0,1);
 
-            return Color(c,c,c);
+
+            // return Color(c,c,c);
 
         }
         else
         {
+            final_t = t_pyramid;
+            final_object = "pyramid";
+            finalNormal = Point(pyramidNormal.x,pyramidNormal.y,pyramidNormal.z);
             // cout << "hits the pyramid\n";
             // cout << pyramidIndex;
             //  pyramid_arr[pyramidIndex].color.printColor();
-            return pyramid_arr[pyramidIndex].color;
+            //  return pyramid_arr[pyramidIndex].color;
         }
 
     }
+    double ambient,diffuse,specular,reflection,specular_exponent;
+    Color object_color;
+    int finalIdx = -1;
+
+    if(final_object == "checkerBoard")
+    {
+        finalNormal = Point(0,0,1);
+
+        ambient = .4;
+        specular = .15, diffuse=.2,reflection=.25;
+        specular_exponent = 4;
+        Point p = Point(source.p.x+final_t*source.v.x,source.p.y+final_t*source.v.y,source.p.z+final_t*source.v.z);
+        double c = checkerBoard.whichTile(p);
+        object_color = Color(c,c,c);
+        finalIdx = 0;
+
+    }
+    else if(final_object == "sphere")
+    {
+
+
+        finalNormal = Point(sphereNormal.x,sphereNormal.y,sphereNormal.z);
+        //cout << "sphere";
+
+        ambient = sphere_arr[sphereIndex].ambient;
+        specular = sphere_arr[sphereIndex].specular, diffuse=sphere_arr[sphereIndex].diffuse,reflection=sphere_arr[sphereIndex].reflection;
+        specular_exponent = sphere_arr[sphereIndex].specular_exponent;
+        object_color = Color(sphere_arr[sphereIndex].color.R,sphere_arr[sphereIndex].color.G,sphere_arr[sphereIndex].color.B);
+        finalIdx = sphereIndex;
+    }
+    else if(final_object == "pyramid")
+    {
+        finalNormal = Point(pyramidNormal.x,pyramidNormal.y,pyramidNormal.z);
+
+        ambient = pyramid_arr[pyramidIndex].ambient;
+        specular = pyramid_arr[pyramidIndex].specular, diffuse=pyramid_arr[pyramidIndex].diffuse,reflection=pyramid_arr[pyramidIndex].reflection;
+        specular_exponent = pyramid_arr[pyramidIndex].specular_exponent;
+        object_color = Color(pyramid_arr[pyramidIndex].color.R,pyramid_arr[pyramidIndex].color.G,pyramid_arr[pyramidIndex].color.B);
+        finalIdx = pyramidIndex;
+    }
+    Point intersection = Point(source.p.x+final_t*source.v.x,source.p.y+final_t*source.v.y,source.p.z+final_t*source.v.z);
+
+//    if(final_object=="sphere")
+//            intersection.printPoint();
+    Color ambientLight = Color(object_color.R,object_color.G,object_color.B);
+
+    Color diffuseLight = Color(object_color.R,object_color.G,object_color.B);
+    Color specularLight = Color(object_color.R,object_color.G,object_color.B);
+    Color finalColor = ambientLight.scaleColor(ambient);
+
+   // if(final_object == "sphere" &&( finalColor.R!=0 || finalColor.G!=0 || finalColor.B!=0) )cout << "BS";
+    for(int i=0;i<lightSource_arr.size();i++){
+
+     // direction= (lightSource-intersectionPoint) //normalize it
+//start= intersection + direction*1
+        Point direction = subtractPoints(lightSource_arr[i],intersection);
+        direction.normalize();
+        Point startingPoint = addPoints(intersection,direction);
+        Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
+        //cout << finalNormal.getAbsoluteVal();
+      //  finalNormal.normalize();
+
+        Ray reflectedLight;
+       // source.v.normalize();
+        double dot = 2*dotProduct(lightRay.v,finalNormal);
+        reflectedLight.v =subtractPoints(lightRay.v,scalePoint(finalNormal,dot));
+        reflectedLight.v.normalize();
+        reflectedLight.p.x = intersection.x;
+        reflectedLight.p.y = intersection.y;
+        reflectedLight.p.z = intersection.z;
+
+
+
+        double theta =  dotProduct(lightRay.v,finalNormal)/(lightRay.v.getAbsoluteVal()* finalNormal.getAbsoluteVal());
+       // if(theta<0.0) theta = 0.0;
+
+        double phi = dotProduct(source.v,reflectedLight.v)/(source.v.getAbsoluteVal()*reflectedLight.v.getAbsoluteVal());
+       // if(phi<0.0) phi = 0.0;
+
+
+        diffuseLight = diffuseLight.scaleColor(diffuse*theta);
+        specularLight = specularLight.scaleColor(specular*pow(phi,specular_exponent));
+        finalColor.R = finalColor.R + diffuseLight.R + specularLight.R;
+        finalColor.G = finalColor.G + diffuseLight.G + specularLight.G;
+        finalColor.B = finalColor.B + diffuseLight.B + specularLight.B;
+
+
+
+    }
+//    cout << "Object's inherent color: ";
+//    object_color.printColor();
+//    cout << "Final Color: ";
+//    finalColor.printColor();
+        Ray reflectedSourceRay;
+        // source.v.normalize();
+        double dot = 2*dotProduct(source.v,finalNormal);
+        reflectedSourceRay.v =subtractPoints(source.v,scalePoint(finalNormal,dot));
+        reflectedSourceRay.v.normalize();
+        reflectedSourceRay.p.x = intersection.x + reflectedSourceRay.v.x;
+        reflectedSourceRay.p.y = intersection.y + reflectedSourceRay.v.y;
+        reflectedSourceRay.p.z = intersection.z + reflectedSourceRay.v.z;
+        Color returnColor = computeColor(reflectedSourceRay,final_object,finalIdx,depth-1);
+//    cout<<"refl col: ";lght.print();
+        returnColor = returnColor.scaleColor(reflection);
+        finalColor.R = finalColor.R + returnColor.R;
+        finalColor.G = finalColor.G + returnColor.G;
+        finalColor.B = finalColor.B + returnColor.B;
+
+
+    finalColor.R = min(1.0,finalColor.R);
+    finalColor.G = min(1.0,finalColor.G);
+    finalColor.B = min(1.0,finalColor.B);
+  //  finalColor.printColor();
+    return finalColor;
+
 
 }
-
-void generateImage()
-{
-    Ray src;
-    src.p.x = position.x;
-    src.p.y = position.y;
-    src.p.z = position.z;
-    //  sourcePower = Color(1,1,1);
-    number_of_pixels = 400;
-    int   screenHeight = number_of_pixels;
-    int   screenWidth = number_of_pixels;
-    bitmap_image image(number_of_pixels,number_of_pixels);
-    for(int row = 0; row<screenHeight; row++)
-    {
-        for(int colm = 0; colm<screenWidth; colm++)
-        {
-            double ht = row-screenHeight/2;
-            ht/=screenHeight/2;
-            double wd = colm-screenWidth/2;
-            wd/=screenWidth/2;
-            Point dir = addPoints(scalePoint(upVector,ht), scalePoint(rightVector,wd));
-            dir = addPoints(lookVector,dir);
-            src.v.x = dir.x;
-            src.v.y = dir.y;
-            src.v.z = dir.z;
-            src.v.normalize();
-            Color c = computeColor(src,"eye", 0);
-            image.set_pixel(colm,number_of_pixels-1-row,c.R*255,c.G*255,c.B*255);
-
-            //  imageMap[row][colm] = rayCast(src,recursionLevel, ObjectID(EYE,0));
-
-        }
-    }
-    cout<<"Done generating the image: "<<endl;
-//     number_of_pixels = 786;
-//     bitmap_image image(number_of_pixels,number_of_pixels);
+//void generateImage()
+//{
+//    Ray src;
+//    src.p.x = position.x;
+//    src.p.y = position.y;
+//    src.p.z = position.z;
+//    //  sourcePower = Color(1,1,1);
 //
-//          //  Color &c = pixelMap[i][j];
-//          //  image.set_pixel(j,number_of_pixels-i-1,c.R*255,c.G*255,c.B*255);  // Setting the color of the pixels
-//
-//
-//    Ray source;
-//    source.p.x = position.x;
-//    source.p.y = position.y;
-//    source.p.z = position.z;
-//
-//    int half = number_of_pixels/2;
-//    for(int i=-number_of_pixels/2+1;i<number_of_pixels/2;i++){
-//        for(int j=-number_of_pixels/2 + 1;j<number_of_pixels/2;j++){
-//            outFile << "i: "<< i << " " << "j: " << j << endl;
-//            double ht = i;//-number_of_pixels/2;
-//            ht/=number_of_pixels/2;
-//            double wd = j;//-number_of_pixels/2;
-//            wd/=number_of_pixels/2;
-//            Point dir = addPoints(scalePoint(upVector,ht) ,scalePoint(rightVector,wd));
+//    int   screenHeight = number_of_pixels;
+//    int   screenWidth = number_of_pixels;
+//    bitmap_image image(number_of_pixels,number_of_pixels);
+//    for(int row = 0; row<screenHeight; row++)
+//    {
+//        for(int colm = 0; colm<screenWidth; colm++)
+//        {
+//            double ht = row-screenHeight/2;
+//            ht/=screenHeight/2;
+//            double wd = colm-screenWidth/2;
+//            wd/=screenWidth/2;
+//            Point dir = addPoints(scalePoint(upVector,ht), scalePoint(rightVector,wd));
 //            dir = addPoints(lookVector,dir);
-//            dir.normalize();
-//            source.v.x = dir.x;
-//            source.v.y = dir.y;
-//            source.v.z = dir.z;
+//            src.v.x = dir.x;
+//            src.v.y = dir.y;
+//            src.v.z = dir.z;
+//            src.v.normalize();
+//            Color c = computeColor(src,"eye", 0,1);
+//            image.set_pixel(colm,number_of_pixels-1-row,c.R*255,c.G*255,c.B*255);
 //
-//          //  cout << "direction: " << source.v.x <<" " <<source.v.y << " "<<source.v.z <<endl;
-//
-//            Color c = computeColor(source,"eye", 0);
-//            //cout << "i: " << i << " j: " << j << endl;
-//           // cout << c.R << " "<< c.G << " "<< c.B << endl;
-//           image.set_pixel((i+half)/half,((j+half)/half),c.R*255,c.G*255,c.B*255);
+//            //  imageMap[row][colm] = rayCast(src,recursionLevel, ObjectID(EYE,0));
 //
 //        }
-//
 //    }
-//    cout << "Done printing the image\n";
+//    cout << "Done forming the image"<<endl;
+//    image.save_image("out.bmp");
+//}
+double degreeToRadian(double angle)
+{
+    return (pi*angle/180.0);
+}
+void generateImage()
+{
+    number_of_pixels = 400;
+
+    int aspectRatio = 1;
+    double fovY = 90.0;
+    double fovX = fovY*aspectRatio;
+    double nearDistance = 1;
+    double farDistance = 1000.0;
+    double screenHeight =   2*nearDistance*tan(degreeToRadian(fovY/2));
+    double screenWidth = 2*nearDistance*tan(degreeToRadian(fovX/2));
+    double imageHeight = number_of_pixels;
+    double imageWidth = number_of_pixels;
+    cout << screenHeight << " " << screenWidth << endl;
+    double cellHeight = screenHeight/imageHeight;
+    double cellWidth = screenWidth/imageWidth;
+    cout  << cellHeight << " " << cellWidth << endl;;
+
+    bitmap_image image(number_of_pixels,number_of_pixels);
+    for (int x = 0; x < number_of_pixels; x++) {
+        for (int y = 0; y < number_of_pixels; y++) {
+            image.set_pixel(x, y, 0, 0,0);
+        }
+    }
+    Point initialPoint = addPoints(position,scalePoint(lookVector,nearDistance));
+    initialPoint = addPoints(initialPoint,scalePoint(upVector,.5*cellHeight));
+    initialPoint = addPoints(initialPoint,scalePoint(rightVector,.5*cellWidth));
+    initialPoint.printPoint();
+    for(int i=-number_of_pixels/2;i<=(number_of_pixels/2 - 1);i++)
+    {
+        for(int j=-number_of_pixels/2;j<=(number_of_pixels/2 - 1);j++)
+        {
+            Point newPoint = addPoints(initialPoint,scalePoint(upVector,cellHeight*i));
+            newPoint = addPoints(newPoint,scalePoint(rightVector,cellWidth*j));
+            Ray source = Ray(position,newPoint);
+
+             Color c = computeColor(source,"eye", 0,1);
+
+
+             int col = j+number_of_pixels/2;
+             int row = i+number_of_pixels/2;
+            image.set_pixel(col,number_of_pixels-1-row,c.R*255,c.G*255,c.B*255);
+
+        }
+
+    }
+
+    cout << "Done forming the image"<<endl;
     image.save_image("out.bmp");
-//
+    //  gluPerspective(80,	1,	1,	1000.0);
+    //field of view in the Y (vertically)
+    //aspect ratio that determines the field of view in the X direction (horizontally)
+    //near distance
+    //far distance
 
 
 }
+
 void keyboardListener(unsigned char key, int x,int y)
 {
     double change = 0.03;
@@ -963,7 +1169,7 @@ void keyboardListener(unsigned char key, int x,int y)
     case '0':
     {
         generateImage();
-        getImage();
+
 
     }
 
@@ -1242,7 +1448,6 @@ void init()
     lookVector = Point(-1.0/sqrt(2), -1.0/sqrt(2), 0);
 
     position = Point(100,100,50);
-    //  u = (0, 0, 1), r = (-1/√2, 1/√2, 0),  l = (-1/√2, -1/√2, 0), and pos = (100, 100, 0
 
     //clear the screen
     glClearColor(0,0,0,0);
@@ -1257,7 +1462,7 @@ void init()
     glLoadIdentity();
 
     //give PERSPECTIVE parameters
-    gluPerspective(80,	1,	1,	1000.0);
+    gluPerspective(90,	1,	1,	1000.0);
     //field of view in the Y (vertically)
     //aspect ratio that determines the field of view in the X direction (horizontally)
     //near distance
@@ -1268,7 +1473,7 @@ void init()
 int main(int argc, char **argv)
 {
     glutInit(&argc,argv);
-    glutInitWindowSize(500, 500);
+    glutInitWindowSize(500,500);
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
 
