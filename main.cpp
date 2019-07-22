@@ -68,7 +68,8 @@ struct Color
         G=y;
         B=z;
     }
-    Color scaleColor(double P){
+    Color scaleColor(double P)
+    {
         return Color(R*P,G*P,B*P);
     }
     void printColor()
@@ -433,17 +434,20 @@ struct Sphere
                 setNormal(ray,t1);
                 return t1;
             }
-            else {
-                    if(t1<t2) {
-                            setNormal(ray,t1);
-                            return t1;
+            else
+            {
+                if(t1<t2)
+                {
+                    setNormal(ray,t1);
+                    return t1;
 
-                    }
-                    else {
-                        setNormal(ray,t2);
-                        return t2;
+                }
+                else
+                {
+                    setNormal(ray,t2);
+                    return t2;
 
-                    }
+                }
             }
         }
 
@@ -738,49 +742,52 @@ Color computeColor(Ray source,string type,int id,int depth)
 
     for(int i=0; i<sphere_arr.size(); i++)
     {
-        if(!(type=="sphere" && id==i)){
-
-        double temp = sphere_arr[i].raySphereIntersection(source);
-        // cout << "Intersection for sphere: " << temp << endl;
-        if(temp!=-INF && temp>=0 && temp<t_sphere)
+        if(!(type=="sphere" && id==i))
         {
-            t_sphere =temp;
-            sphereNormal.x = sphere_arr[i].normal.x;
-            sphereNormal.y = sphere_arr[i].normal.y;
-            sphereNormal.z = sphere_arr[i].normal.z;
-            sphereIndex = i;
 
-        }
+            double temp = sphere_arr[i].raySphereIntersection(source);
+            // cout << "Intersection for sphere: " << temp << endl;
+            if(temp!=-INF && temp>=0 && temp<t_sphere)
+            {
+                t_sphere =temp;
+                sphereNormal.x = sphere_arr[i].normal.x;
+                sphereNormal.y = sphere_arr[i].normal.y;
+                sphereNormal.z = sphere_arr[i].normal.z;
+                sphereIndex = i;
+
+            }
         }
 
 
     }
-   //  if(t_sphere>=-eps && t_sphere<=eps)sphereIndex= -1;
-      if(t_sphere>INF-eps)    sphereIndex= -1;
+    //  if(t_sphere>=-eps && t_sphere<=eps)sphereIndex= -1;
+    if(t_sphere>INF-eps)    sphereIndex= -1;
     for(int i=0; i<pyramid_arr.size(); i++)
     {
         //   cout << i;
-        if(!(type=="pyramid" && id==i)) {
-        double temp = pyramid_arr[i].rayPyramidIntersection(source);
-        // cout << "Intersection for pyramid: " << temp << endl;
-        if(temp!=-INF && temp>=0 && temp<t_pyramid)
+        if(!(type=="pyramid" && id==i))
         {
-            t_pyramid =temp;
-            pyramidNormal.x = pyramid_arr[i].normal.x;
-            pyramidNormal.y = pyramid_arr[i].normal.y;
-            pyramidNormal.z = pyramid_arr[i].normal.z;
-            pyramidIndex = i;
-            //    pyramid_arr[i].color.printColor();
+            double temp = pyramid_arr[i].rayPyramidIntersection(source);
+            // cout << "Intersection for pyramid: " << temp << endl;
+            if(temp!=-INF && temp>=0 && temp<t_pyramid)
+            {
+                t_pyramid =temp;
+                pyramidNormal.x = pyramid_arr[i].normal.x;
+                pyramidNormal.y = pyramid_arr[i].normal.y;
+                pyramidNormal.z = pyramid_arr[i].normal.z;
+                pyramidIndex = i;
+                //    pyramid_arr[i].color.printColor();
 
-        }
+            }
         }
 
     }
-     if(t_pyramid>INF-eps)    pyramidIndex= -1;
-     // if(t_pyramid>=-eps && t_pyramid<=eps)pyramidIndex= -1;
-    //  if(t_pyramid<t_sphere ) cout << "pyramid kacche \n";
+    if(t_pyramid>INF-eps)    pyramidIndex= -1;
+    // if(t_pyramid>=-eps && t_pyramid<=eps)pyramidIndex= -1;
+    //  if(t_pyramid<t_sphere ) cout << "pyramid is nearer \n";
     if(type!="checkerBoard")
         t_checkerBoard = checkerBoard.rayCheckerBoardIntersection(source);
+    else t_checkerBoard = -INF;
 
     Point finalNormal;
     double final_t;
@@ -850,10 +857,48 @@ Color computeColor(Ray source,string type,int id,int depth)
     double ambient,diffuse,specular,reflection,specular_exponent;
     Color object_color;
     int finalIdx = -1;
+    bool isLightObstructed[lightSource_arr.size()];
+    for(int i=0; i<lightSource_arr.size(); i++) isLightObstructed[i] = false;
+    Point intersection = Point(source.p.x+final_t*source.v.x,source.p.y+final_t*source.v.y,source.p.z+final_t*source.v.z);
+
+
 
     if(final_object == "checkerBoard")
     {
         finalNormal = Point(0,0,1);
+
+
+        for(int i=0; i<lightSource_arr.size(); i++)
+        {
+            Point direction = subtractPoints(lightSource_arr[i],intersection);
+            direction.normalize();
+            Point startingPoint = addPoints(intersection,direction);
+            Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
+            double t1 = INF, t2 = INF;
+            for(int sp=0; sp<sphere_arr.size(); sp++)
+            {
+                double temp = sphere_arr[sp].raySphereIntersection(lightRay);
+                // cout << "Intersection for sphere: " << temp << endl;
+                if(temp!=-INF && temp>=0 && temp<t1)
+                {
+                    t1 =temp;
+                }
+
+            }
+            for(int py=0; py<pyramid_arr.size(); py++)
+            {
+                double temp = pyramid_arr[py].rayPyramidIntersection(lightRay);
+                // cout << "Intersection for sphere: " << temp << endl;
+                if(temp!=-INF && temp>=0 && temp<t2)
+                {
+                    t2 =temp;
+                }
+
+            }
+            if((t1!=INF && t1>=0)|| (t2!=INF && t2>=0)) isLightObstructed[i]= true;
+
+            //we have to cast a ray from lightsource to intersection point and see
+        }
 
         ambient = .4;
         specular = .15, diffuse=.2,reflection=.25;
@@ -868,6 +913,41 @@ Color computeColor(Ray source,string type,int id,int depth)
     {
 
 
+        for(int i=0; i<lightSource_arr.size(); i++)
+        {
+                       Point direction = subtractPoints(lightSource_arr[i],intersection);
+            direction.normalize();
+            Point startingPoint = addPoints(intersection,direction);
+            Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
+
+
+            double t1 = INF, t2 = INF;
+            for(int sp=0; sp<sphere_arr.size(); sp++)
+            {
+
+                    double temp = sphere_arr[sp].raySphereIntersection(lightRay);
+                    // cout << "Intersection for sphere: " << temp << endl;
+                    if(temp!=-INF && temp>=0 && temp<t1)
+                    {
+                        t1 =temp;
+                    }
+
+
+            }
+            for(int py=0; py<pyramid_arr.size(); py++)
+            {
+                double temp = pyramid_arr[py].rayPyramidIntersection(lightRay);
+                // cout << "Intersection for sphere: " << temp << endl;
+                if(temp!=-INF && temp>=0 && temp<t2)
+                {
+                    t2 =temp;
+                }
+
+            }
+            if((t1!=INF && t1>=0)|| (t2!=INF && t2>=0)) isLightObstructed[i]= true;
+        }
+
+
         finalNormal = Point(sphereNormal.x,sphereNormal.y,sphereNormal.z);
         //cout << "sphere";
 
@@ -879,7 +959,41 @@ Color computeColor(Ray source,string type,int id,int depth)
     }
     else if(final_object == "pyramid")
     {
-        finalNormal = Point(pyramidNormal.x,pyramidNormal.y,pyramidNormal.z);
+
+
+        for(int i=0; i<lightSource_arr.size(); i++)
+        {
+                       Point direction = subtractPoints(lightSource_arr[i],intersection);
+            direction.normalize();
+            Point startingPoint = addPoints(intersection,direction);
+            Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
+
+
+            double t1 = INF, t2 = INF;
+            for(int sp=0; sp<sphere_arr.size(); sp++)
+            {
+                double temp = sphere_arr[sp].raySphereIntersection(lightRay);
+                // cout << "Intersection for sphere: " << temp << endl;
+                if(temp!=-INF && temp>=0 && temp<t1)
+                {
+                    t1 =temp;
+                }
+
+            }
+            for(int py=0; py<pyramid_arr.size(); py++)
+            {
+
+                    double temp = pyramid_arr[py].rayPyramidIntersection(lightRay);
+                    // cout << "Intersection for sphere: " << temp << endl;
+                    if(temp!=-INF && temp>=0 && temp<t2)
+                    {
+                        t2 =temp;
+                    }
+
+
+            }
+            if((t1!=INF && t1>=0)|| (t2!=INF && t2>=0)) isLightObstructed[i]= true;
+        }
 
         ambient = pyramid_arr[pyramidIndex].ambient;
         specular = pyramid_arr[pyramidIndex].specular, diffuse=pyramid_arr[pyramidIndex].diffuse,reflection=pyramid_arr[pyramidIndex].reflection;
@@ -887,7 +1001,6 @@ Color computeColor(Ray source,string type,int id,int depth)
         object_color = Color(pyramid_arr[pyramidIndex].color.R,pyramid_arr[pyramidIndex].color.G,pyramid_arr[pyramidIndex].color.B);
         finalIdx = pyramidIndex;
     }
-    Point intersection = Point(source.p.x+final_t*source.v.x,source.p.y+final_t*source.v.y,source.p.z+final_t*source.v.z);
 
 //    if(final_object=="sphere")
 //            intersection.printPoint();
@@ -897,69 +1010,69 @@ Color computeColor(Ray source,string type,int id,int depth)
     Color specularLight = Color(object_color.R,object_color.G,object_color.B);
     Color finalColor = ambientLight.scaleColor(ambient);
 
-   // if(final_object == "sphere" &&( finalColor.R!=0 || finalColor.G!=0 || finalColor.B!=0) )cout << "BS";
-    for(int i=0;i<lightSource_arr.size();i++){
+    // if(final_object == "sphere" &&( finalColor.R!=0 || finalColor.G!=0 || finalColor.B!=0) )cout << "BS";
+    for(int i=0; i<lightSource_arr.size(); i++)
+    {
+        if(isLightObstructed[i]==false)
+        {
 
-     // direction= (lightSource-intersectionPoint) //normalize it
-//start= intersection + direction*1
-        Point direction = subtractPoints(lightSource_arr[i],intersection);
-        direction.normalize();
-        Point startingPoint = addPoints(intersection,direction);
-        Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
-        //cout << finalNormal.getAbsoluteVal();
-      //  finalNormal.normalize();
+            // direction= (lightSource-intersectionPoint) //normalize it
+            //start= intersection + direction*1
+            Point direction = subtractPoints(lightSource_arr[i],intersection);
+            direction.normalize();
+            Point startingPoint = addPoints(intersection,direction);
+            Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
+            //cout << finalNormal.getAbsoluteVal();
+            //  finalNormal.normalize();
 
-        Ray reflectedLight;
-       // source.v.normalize();
-        double dot = 2*dotProduct(lightRay.v,finalNormal);
-        reflectedLight.v =subtractPoints(lightRay.v,scalePoint(finalNormal,dot));
-        reflectedLight.v.normalize();
-        reflectedLight.p.x = intersection.x;
-        reflectedLight.p.y = intersection.y;
-        reflectedLight.p.z = intersection.z;
-
-
-
-        double theta =  dotProduct(lightRay.v,finalNormal)/(lightRay.v.getAbsoluteVal()* finalNormal.getAbsoluteVal());
-       // if(theta<0.0) theta = 0.0;
-
-        double phi = dotProduct(source.v,reflectedLight.v)/(source.v.getAbsoluteVal()*reflectedLight.v.getAbsoluteVal());
-       // if(phi<0.0) phi = 0.0;
+            Ray reflectedLight;
+            // source.v.normalize();
+            double dot = 2*dotProduct(lightRay.v,finalNormal);
+            reflectedLight.v =subtractPoints(lightRay.v,scalePoint(finalNormal,dot));
+            reflectedLight.v.normalize();
+            reflectedLight.p.x = intersection.x;
+            reflectedLight.p.y = intersection.y;
+            reflectedLight.p.z = intersection.z;
 
 
-        diffuseLight = diffuseLight.scaleColor(diffuse*theta);
-        specularLight = specularLight.scaleColor(specular*pow(phi,specular_exponent));
-        finalColor.R = finalColor.R + diffuseLight.R + specularLight.R;
-        finalColor.G = finalColor.G + diffuseLight.G + specularLight.G;
-        finalColor.B = finalColor.B + diffuseLight.B + specularLight.B;
+
+            double theta =  dotProduct(lightRay.v,finalNormal)/(lightRay.v.getAbsoluteVal()* finalNormal.getAbsoluteVal());
+            // if(theta<0.0) theta = 0.0;
+
+            double phi = dotProduct(source.v,reflectedLight.v)/(source.v.getAbsoluteVal()*reflectedLight.v.getAbsoluteVal());
+            // if(phi<0.0) phi = 0.0;
+
+
+            diffuseLight = diffuseLight.scaleColor(diffuse*theta);
+            specularLight = specularLight.scaleColor(specular*pow(phi,specular_exponent));
+            finalColor.R = finalColor.R + diffuseLight.R + specularLight.R;
+            finalColor.G = finalColor.G + diffuseLight.G + specularLight.G;
+            finalColor.B = finalColor.B + diffuseLight.B + specularLight.B;
+        }
 
 
 
     }
-//    cout << "Object's inherent color: ";
-//    object_color.printColor();
-//    cout << "Final Color: ";
-//    finalColor.printColor();
-        Ray reflectedSourceRay;
-        // source.v.normalize();
-        double dot = 2*dotProduct(source.v,finalNormal);
-        reflectedSourceRay.v =subtractPoints(source.v,scalePoint(finalNormal,dot));
-        reflectedSourceRay.v.normalize();
-        reflectedSourceRay.p.x = intersection.x + reflectedSourceRay.v.x;
-        reflectedSourceRay.p.y = intersection.y + reflectedSourceRay.v.y;
-        reflectedSourceRay.p.z = intersection.z + reflectedSourceRay.v.z;
-        Color returnColor = computeColor(reflectedSourceRay,final_object,finalIdx,depth-1);
-//    cout<<"refl col: ";lght.print();
-        returnColor = returnColor.scaleColor(reflection);
-        finalColor.R = finalColor.R + returnColor.R;
-        finalColor.G = finalColor.G + returnColor.G;
-        finalColor.B = finalColor.B + returnColor.B;
+    Ray reflectedSourceRay;
+    // source.v.normalize();
+    double dot = 2*dotProduct(source.v,finalNormal);
+    reflectedSourceRay.v =subtractPoints(source.v,scalePoint(finalNormal,dot));
+    reflectedSourceRay.v.normalize();
+    reflectedSourceRay.p.x = intersection.x + reflectedSourceRay.v.x;
+    reflectedSourceRay.p.y = intersection.y + reflectedSourceRay.v.y;
+    reflectedSourceRay.p.z = intersection.z + reflectedSourceRay.v.z;
+    Color returnColor = computeColor(reflectedSourceRay,final_object,finalIdx,depth-1);
+
+    returnColor = returnColor.scaleColor(reflection);
+    finalColor.R = finalColor.R + returnColor.R;
+    finalColor.G = finalColor.G + returnColor.G;
+    finalColor.B = finalColor.B + returnColor.B;
 
 
     finalColor.R = min(1.0,finalColor.R);
     finalColor.G = min(1.0,finalColor.G);
     finalColor.B = min(1.0,finalColor.B);
-  //  finalColor.printColor();
+
     return finalColor;
 
 
@@ -969,49 +1082,10 @@ double degreeToRadian(double angle)
 {
     return (pi*angle/180.0);
 }
-//void generateImage2()
-//{
-//    number_of_pixels = 200;
-//    int image_width = number_of_pixels;
-//    bitmap_image image(image_width, image_width);
-//    for(int i=0;i<image_width;i++) {
-//        for(int j=0;j<image_width; j++) {
-//            image.set_pixel(j, i,0,0,0);
-//        }
-//    }
-//    int Window_height = 500;
-//    int Window_width = 500;
-//    double VIEW_ANGLE = 90;
-//    double plane_distance= (Window_height/2)/tan(VIEW_ANGLE*pi/360);
-//    Point topleft;
-//    topleft.x= position.x + lookVector.x*plane_distance-rightVector.x*Window_width/2+upVector.x*Window_height/2;
-//    topleft.y= position.y + lookVector.y*plane_distance-rightVector.y*Window_width/2+upVector.y*Window_height/2;
-//    topleft.z= position.z + lookVector.z*plane_distance-rightVector.z*Window_width/2+upVector.z*Window_height/2;
-//    double du=double(Window_width)/image_width;
-//    double dv=double(Window_height)/image_width;
-//    for(int i=0; i<image_width; i++){
-//        for(int j=0; j<image_width; j++){
-//            Point corner;
-//            corner.x=topleft.x+j*rightVector.x*du-i*upVector.x*dv;
-//            corner.y=topleft.y+j*rightVector.y*du-i*upVector.y*dv;
-//            corner.z=topleft.z+j*rightVector.z*du-i*upVector.z*dv;
-//             Ray source = Ray(position,corner);
-//
-//             Color c = computeColor(source,"eye", 0,1);
-//
-//
-//
-//            image.set_pixel(j,i,c.R*255,c.G*255,c.B*255);
-//        }
-//    }
-//    cout << "Done forming the image"<<endl;
-//    image.save_image("out.bmp");
-//
-//
-//}
+
 void generateImage()
 {
-    //number_of_pixels = 400;
+    number_of_pixels = 400;
 
     int aspectRatio = 1;
     double fovY = 90.0;
@@ -1028,8 +1102,10 @@ void generateImage()
     cout  << cellHeight << " " << cellWidth << endl;;
 
     bitmap_image image(number_of_pixels,number_of_pixels);
-    for (int x = 0; x < number_of_pixels; x++) {
-        for (int y = 0; y < number_of_pixels; y++) {
+    for (int x = 0; x < number_of_pixels; x++)
+    {
+        for (int y = 0; y < number_of_pixels; y++)
+        {
             image.set_pixel(x, y, 0, 0,0);
         }
     }
@@ -1037,42 +1113,25 @@ void generateImage()
     initialPoint = addPoints(initialPoint,scalePoint(upVector,.5*cellHeight));
     initialPoint = addPoints(initialPoint,scalePoint(rightVector,.5*cellWidth));
     initialPoint.printPoint();
-    for(int i=-number_of_pixels/2;i<=(number_of_pixels/2 - 1);i++)
+    for(int i=-number_of_pixels/2; i<=(number_of_pixels/2 - 1); i++)
     {
-        for(int j=-number_of_pixels/2;j<=(number_of_pixels/2 - 1);j++)
+        for(int j=-number_of_pixels/2; j<=(number_of_pixels/2 - 1); j++)
         {
             Point newPoint = addPoints(initialPoint,scalePoint(upVector,cellHeight*i));
             newPoint = addPoints(newPoint,scalePoint(rightVector,cellWidth*j));
             Ray source = Ray(position,newPoint);
 
-             Color c = computeColor(source,"camera", 0,recursion);
+            Color c = computeColor(source,"camera", 0,1);
 
 
-             int col = j+number_of_pixels/2;
-             int row = i+number_of_pixels/2;
+            int col = j+number_of_pixels/2;
+            int row = i+number_of_pixels/2;
             image.set_pixel(col,number_of_pixels-1-row,c.R*255,c.G*255,c.B*255);
 
         }
 
     }
-//    for(int i=0;i<number_of_pixels;i++)
-//    {
-//        for(int j=0;j<number_of_pixels;j++)
-//        {
-//            Point newPoint = addPoints(initialPoint,scalePoint(upVector,cellHeight*i));
-//            newPoint = addPoints(newPoint,scalePoint(rightVector,-cellWidth*j));
-//            Ray source = Ray(position,newPoint);
-//
-//             Color c = computeColor(source,"eye", 0,1);
-//
-//
-//           //  int col = j+number_of_pixels/2;
-//           //  int row = i+number_of_pixels/2;
-//            image.set_pixel(j,i,c.R*255,c.G*255,c.B*255);
-//
-//        }
-//
-//    }
+
 
 
     cout << "Done forming the image"<<endl;
@@ -1418,26 +1477,7 @@ void readFile()
 
 
 }
-void test()
-{
 
-    outFile.open("debug.txt");
-    generateImage();
-//    Sphere sphere = Sphere(1,Point(5,0,0),Color(1,0,0));
-////    Triangle t;
-////    t.a = Point(0,0,0);
-////    t.b = Point(0,5,0);
-////    t.c = Point(5,0,0);
-////
-//    Point p = Point(0,0,5);
-//    Point q = Point(5,0,1);
-//
-//    Ray ray = Ray(p,q);
-//    outFile << "ray.v: " << ray.v.x << " " <<ray.v.y << " "<< ray.v.z << endl;
-//    outFile << "t:" << sphere.raySphereIntersection(ray);
-    outFile.close();
-
-}
 
 void init()
 {
@@ -1458,7 +1498,7 @@ void init()
     rightVector = Point(-1.0/sqrt(2), 1.0/sqrt(2), 0);
     lookVector = Point(-1.0/sqrt(2), -1.0/sqrt(2), 0);
 
-    position = Point(100,100,50);
+    position = Point(100,100,40);
 
     //clear the screen
     glClearColor(0,0,0,0);
