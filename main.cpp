@@ -895,7 +895,7 @@ Color computeColor(Ray source,string type,int id,int depth)
                 }
 
             }
-            if((t1!=INF && t1>=0)|| (t2!=INF && t2>=0)) isLightObstructed[i]= true;
+            if((t1!=INF && t1>0)|| (t2!=INF && t2>0)) isLightObstructed[i]= true;
 
             //we have to cast a ray from lightsource to intersection point and see
         }
@@ -915,7 +915,7 @@ Color computeColor(Ray source,string type,int id,int depth)
 
         for(int i=0; i<lightSource_arr.size(); i++)
         {
-                       Point direction = subtractPoints(lightSource_arr[i],intersection);
+            Point direction = subtractPoints(lightSource_arr[i],intersection);
             direction.normalize();
             Point startingPoint = addPoints(intersection,direction);
             Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
@@ -925,12 +925,14 @@ Color computeColor(Ray source,string type,int id,int depth)
             for(int sp=0; sp<sphere_arr.size(); sp++)
             {
 
+
                     double temp = sphere_arr[sp].raySphereIntersection(lightRay);
                     // cout << "Intersection for sphere: " << temp << endl;
                     if(temp!=-INF && temp>=0 && temp<t1)
                     {
                         t1 =temp;
                     }
+
 
 
             }
@@ -944,7 +946,7 @@ Color computeColor(Ray source,string type,int id,int depth)
                 }
 
             }
-            if((t1!=INF && t1>=0)|| (t2!=INF && t2>=0)) isLightObstructed[i]= true;
+            if((t1!=INF && t1>0)|| (t2!=INF && t2>0)) isLightObstructed[i]= true;
         }
 
 
@@ -982,6 +984,7 @@ Color computeColor(Ray source,string type,int id,int depth)
             }
             for(int py=0; py<pyramid_arr.size(); py++)
             {
+              //  if(pyramidIndex!=py){
 
                     double temp = pyramid_arr[py].rayPyramidIntersection(lightRay);
                     // cout << "Intersection for sphere: " << temp << endl;
@@ -989,10 +992,11 @@ Color computeColor(Ray source,string type,int id,int depth)
                     {
                         t2 =temp;
                     }
+               // }
 
 
             }
-            if((t1!=INF && t1>=0)|| (t2!=INF && t2>=0)) isLightObstructed[i]= true;
+            if((t1!=INF && t1>0)|| (t2!=INF && t2>0)) isLightObstructed[i]= true;
         }
 
         ambient = pyramid_arr[pyramidIndex].ambient;
@@ -1021,7 +1025,7 @@ Color computeColor(Ray source,string type,int id,int depth)
             Point direction = subtractPoints(lightSource_arr[i],intersection);
             direction.normalize();
             Point startingPoint = addPoints(intersection,direction);
-            Ray lightRay = Ray(startingPoint,lightSource_arr[i]);
+            Ray lightRay = Ray(intersection,lightSource_arr[i]);
             //cout << finalNormal.getAbsoluteVal();
             //  finalNormal.normalize();
 
@@ -1085,7 +1089,7 @@ double degreeToRadian(double angle)
 
 void generateImage()
 {
-    number_of_pixels = 400;
+  //  number_of_pixels = 400;
 
     int aspectRatio = 1;
     double fovY = 90.0;
@@ -1121,7 +1125,7 @@ void generateImage()
             newPoint = addPoints(newPoint,scalePoint(rightVector,cellWidth*j));
             Ray source = Ray(position,newPoint);
 
-            Color c = computeColor(source,"camera", 0,1);
+            Color c = computeColor(source,"camera", 0,4);
 
 
             int col = j+number_of_pixels/2;
